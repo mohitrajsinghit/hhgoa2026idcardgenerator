@@ -89,6 +89,9 @@ const FALLBACK_TITLES = [
   "Coconut Water Debugger",
 ];
 
+export const DEFAULT_TITLE = "Certified Goa Ship-It Specialist";
+export const DEFAULT_ENTRY_NO = "7223";
+
 export function generateBuilderTitle(stackInput: string): string {
   const s = stackInput.toLowerCase();
   const matched = POOLS.filter((p) => p.keywords.some((k) => s.includes(k)));

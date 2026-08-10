@@ -94,14 +94,15 @@ function bird(ctx: CanvasRenderingContext2D, x: number, y: number, size: number,
 function palmTree(
   ctx: CanvasRenderingContext2D,
   baseX: number, baseY: number,
-  height: number, lean: number
+  height: number, lean: number,
+  frondScale: number = 1
 ) {
   ctx.save();
   ctx.strokeStyle = COLORS.forestMid;
   ctx.lineCap = "round";
 
   // Trunk
-  ctx.lineWidth = 9;
+  ctx.lineWidth = 8;
   ctx.beginPath();
   ctx.moveTo(baseX, baseY);
   ctx.quadraticCurveTo(baseX + lean * 0.4, baseY - height * 0.55, baseX + lean, baseY - height);
@@ -112,21 +113,25 @@ function palmTree(
 
   // Fronds
   const fronds = [
-    { ax: -28, ay: -18, bx: -60, by: -6 },
-    { ax: -18, ay: -32, bx: -38, by: -56 },
-    { ax: -4, ay: -36, bx:  4, by: -66 },
-    { ax: 16, ay: -30, bx: 42, by: -52 },
-    { ax: 26, ay: -14, bx: 60, by:  -4 },
-    { ax: 20, ay: 4,  bx: 48, by:  18 },
+    { ax: -22, ay: -14, bx: -46, by: -5 },
+    { ax: -14, ay: -25, bx: -30, by: -44 },
+    { ax: -3,  ay: -28, bx:   3, by: -52 },
+    { ax: 13,  ay: -24, bx:  34, by: -42 },
+    { ax: 21,  ay: -11, bx:  46, by: -3 },
+    { ax: 16,  ay: 3,   bx:  38, by: 14 },
   ];
 
   for (const f of fronds) {
-    const w = 8 - Math.abs(f.bx) * 0.06;
-    ctx.lineWidth = Math.max(3, w);
+    const bx = f.bx * frondScale;
+    const by = f.by * frondScale;
+    const ax = f.ax * frondScale;
+    const ay = f.ay * frondScale;
+    const w = 7 - Math.abs(bx) * 0.05;
+    ctx.lineWidth = Math.max(2.5, w);
     ctx.strokeStyle = COLORS.forestLight;
     ctx.beginPath();
     ctx.moveTo(topX, topY);
-    ctx.quadraticCurveTo(topX + f.ax, topY + f.ay, topX + f.bx, topY + f.by);
+    ctx.quadraticCurveTo(topX + ax, topY + ay, topX + bx, topY + by);
     ctx.stroke();
   }
 
@@ -401,35 +406,50 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
 
   const displayFontWithFallback = `${fonts.display}, "Noto Sans Devanagari", "Segoe UI", sans-serif`;
 
-  // Measure and draw the title pieces side by side
-  ctx.textBaseline = "alphabetic";
+  // Dynamically calculate font sizes so the entire title fits comfortably within inner width
+  const maxTitleW = IW - 48; // Max 724px
+  let baseFontSize = 52;
+  let hackerFont = `800 ${baseFontSize}px ${fonts.display}`;
+  let goaFont = `800 ${Math.round(baseFontSize * 0.78)}px ${displayFontWithFallback}`;
 
-  // "HACKER"
-  ctx.font = `800 72px ${fonts.display}`;
-  const hackerW = ctx.measureText("HACKER").width;
-  // "HOUSE"
-  const houseW = ctx.measureText("HOUSE").width;
-  // "गोवा" (Devanagari font fallback)
-  ctx.font = `800 52px ${displayFontWithFallback}`;
-  const goaW = ctx.measureText("गोवा").width;
+  ctx.font = hackerFont;
+  let hackerW = ctx.measureText("HACKER").width;
+  let houseW = ctx.measureText("HOUSE").width;
+  ctx.font = goaFont;
+  let goaW = ctx.measureText("गोवा").width;
+  let gap = Math.round(baseFontSize * 0.22);
+  let totalTitleW = hackerW + gap + goaW + gap + houseW;
 
-  const gap = 16;
-  const totalTitleW = hackerW + gap + goaW + gap + houseW;
+  while (totalTitleW > maxTitleW && baseFontSize > 24) {
+    baseFontSize -= 1;
+    hackerFont = `800 ${baseFontSize}px ${fonts.display}`;
+    goaFont = `800 ${Math.round(baseFontSize * 0.78)}px ${displayFontWithFallback}`;
+    ctx.font = hackerFont;
+    hackerW = ctx.measureText("HACKER").width;
+    houseW = ctx.measureText("HOUSE").width;
+    ctx.font = goaFont;
+    goaW = ctx.measureText("गोवा").width;
+    gap = Math.round(baseFontSize * 0.22);
+    totalTitleW = hackerW + gap + goaW + gap + houseW;
+  }
+
   let tx = (CARD_W - totalTitleW) / 2;
-  const titleBaseline = titleY + titleH - 14;
+  const titleBaseline = titleY + titleH - 18;
 
   // Draw "HACKER"
-  ctx.font = `800 72px ${fonts.display}`;
+  ctx.font = hackerFont;
   ctx.fillStyle = COLORS.forestDark;
   ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.fillText("HACKER", tx, titleBaseline);
   tx += hackerW + gap;
 
   // Draw "गोवा" in hot pink with slight background treatment
-  ctx.font = `800 56px ${displayFontWithFallback}`;
-  // Pink background pill behind गोवा
-  const goaPillPad = 8;
-  pill(ctx, tx - goaPillPad, titleBaseline - 50, goaW + goaPillPad * 2, 58, 8);
+  ctx.font = goaFont;
+  const goaPillPad = Math.round(baseFontSize * 0.14);
+  const goaPillH = Math.round(baseFontSize * 0.95);
+  const goaPillY = titleBaseline - Math.round(baseFontSize * 0.82);
+  pill(ctx, tx - goaPillPad, goaPillY, goaW + goaPillPad * 2, goaPillH, 8);
   ctx.fillStyle = COLORS.pink;
   ctx.fill();
   ctx.fillStyle = COLORS.yellow;
@@ -437,7 +457,7 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   tx += goaW + gap;
 
   // Draw "HOUSE"
-  ctx.font = `800 72px ${fonts.display}`;
+  ctx.font = hackerFont;
   ctx.fillStyle = COLORS.forestDark;
   ctx.fillText("HOUSE", tx, titleBaseline);
 
@@ -457,9 +477,9 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   // Left vertical date strip
   ctx.save();
   ctx.fillStyle = COLORS.forestMid;
-  ctx.font = `700 11px ${fonts.mono}`;
+  ctx.font = `700 10px ${fonts.mono}`;
   ctx.textAlign = "center";
-  ctx.translate(IL + 26, illY + 170);
+  ctx.translate(IL + 24, illY + 170);
   ctx.rotate(-Math.PI / 2);
   ctx.fillText("28 – 31 OCT 2026", 0, 0);
   ctx.restore();
@@ -467,48 +487,48 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   // Right vertical "GOA, INDIA"
   ctx.save();
   ctx.fillStyle = COLORS.pink;
-  ctx.font = `700 11px ${fonts.mono}`;
+  ctx.font = `700 10px ${fonts.mono}`;
   ctx.textAlign = "center";
-  ctx.translate(IL + IW - 20, illY + 160);
+  ctx.translate(IL + IW - 24, illY + 160);
   ctx.rotate(Math.PI / 2);
   ctx.fillText("GOA, INDIA", 0, 0);
   ctx.restore();
 
   // ── 5a. Palm trees ──────────────────────────────────────────────────
-  palmTree(ctx, IL + 70, illY + 310, 200, -30);
-  palmTree(ctx, IL + 95, illY + 320, 160, -20);
-  palmTree(ctx, IL + IW - 80, illY + 295, 195, 25);
+  palmTree(ctx, IL + 82, illY + 310, 185, -14, 0.78);
+  palmTree(ctx, IL + 110, illY + 320, 145, -8, 0.72);
+  palmTree(ctx, IL + IW - 92, illY + 295, 175, 12, 0.74);
 
   // ── 5b. Signpost (BUILD / SHIP / REPEAT) ────────────────────────────
-  const spX = IL + 46, spY = illY + 80;
+  const spX = IL + 54, spY = illY + 80;
   ctx.fillStyle = COLORS.forestDark;
-  ctx.fillRect(spX + 36, spY, 5, 155);  // post
+  ctx.fillRect(spX + 34, spY, 5, 155);  // post
 
-  arrowSign(ctx, "BUILD",  spX, spY + 8,  80, 26, COLORS.forestDark, COLORS.cream, fonts);
-  arrowSign(ctx, "SHIP",   spX - 4, spY + 44, 88, 26, COLORS.pink, COLORS.white, fonts);
-  arrowSign(ctx, "REPEAT", spX - 8, spY + 80, 96, 26, COLORS.yellow, COLORS.forestDark, fonts);
+  arrowSign(ctx, "BUILD",  spX, spY + 8,  72, 24, COLORS.forestDark, COLORS.cream, fonts);
+  arrowSign(ctx, "SHIP",   spX - 4, spY + 44, 80, 24, COLORS.pink, COLORS.white, fonts);
+  arrowSign(ctx, "REPEAT", spX - 8, spY + 80, 88, 24, COLORS.yellow, COLORS.forestDark, fonts);
 
   // Stars scattered
-  sparkle(ctx, IL + 160, illY + 52, 10, COLORS.yellow);
-  sparkle(ctx, IL + 200, illY + 160, 7, COLORS.pink);
-  sparkle(ctx, IL + IW - 170, illY + 44, 10, COLORS.yellow);
-  sparkle(ctx, IL + IW - 120, illY + 200, 7, COLORS.pink);
+  sparkle(ctx, IL + 155, illY + 52, 9, COLORS.yellow);
+  sparkle(ctx, IL + 190, illY + 160, 7, COLORS.pink);
+  sparkle(ctx, IL + IW - 165, illY + 44, 9, COLORS.yellow);
+  sparkle(ctx, IL + IW - 140, illY + 200, 7, COLORS.pink);
   sparkle(ctx, CARD_W / 2 - 50, illY + 28, 8, COLORS.gold);
   sparkle(ctx, CARD_W / 2 + 60, illY + 36, 6, COLORS.yellow);
 
   // Diamond dots
-  diamond(ctx, IL + 148, illY + 144, 7, COLORS.pink);
-  diamond(ctx, IL + IW - 158, illY + 130, 7, COLORS.yellow);
+  diamond(ctx, IL + 145, illY + 144, 6, COLORS.pink);
+  diamond(ctx, IL + IW - 150, illY + 130, 6, COLORS.yellow);
 
   // Birds
-  bird(ctx, IL + 160, illY + 30, 5, COLORS.forestMid);
-  bird(ctx, IL + IW - 200, illY + 22, 4, COLORS.forestMid);
+  bird(ctx, IL + 150, illY + 30, 5, COLORS.forestMid);
+  bird(ctx, IL + IW - 185, illY + 22, 4, COLORS.forestMid);
 
   // ── 5c. "LET'S BUILD!" sticker ──────────────────────────────────────
   ctx.save();
-  ctx.translate(IL + IW - 78, illY + 88);
-  ctx.rotate((14 * Math.PI) / 180);
-  pill(ctx, -46, -24, 92, 48, 24);
+  ctx.translate(IL + IW - 100, illY + 82);
+  ctx.rotate((12 * Math.PI) / 180);
+  pill(ctx, -38, -19, 76, 38, 19);
   ctx.fillStyle = COLORS.yellow;
   ctx.fill();
   ctx.strokeStyle = COLORS.forestDark;
@@ -518,13 +538,13 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.font = `800 10px ${fonts.display}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("LET'S", 0, -8);
-  ctx.fillText("BUILD!", 0, 8);
+  ctx.fillText("LET'S", 0, -6);
+  ctx.fillText("BUILD!", 0, 6);
   ctx.restore();
 
   // ── 5d. Goa house + scooter (right side) ────────────────────────────
-  goaHouse(ctx, IL + IW - 126, illY + 148, 0.82);
-  scooter(ctx, IL + IW - 128, illY + 290, COLORS.pink);
+  goaHouse(ctx, IL + IW - 148, illY + 152, 0.72);
+  scooter(ctx, IL + IW - 142, illY + 285, COLORS.pink);
 
   // ── 6. Circular photo ───────────────────────────────────────────────
   // Outer decorative ring (yellow dashed)
@@ -673,23 +693,33 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
     ctx.font = `700 9px ${fonts.mono}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(lbl, colCenters[i], colY + 2);
+    ctx.fillText(lbl, colCenters[i], colY + 10);
   });
 
   // Col 1: Builder Class
   const titleLines = title.split(" ");
   const line1 = titleLines.slice(0, Math.ceil(titleLines.length / 2)).join(" ");
   const line2 = titleLines.slice(Math.ceil(titleLines.length / 2)).join(" ");
+  const maxCol1W = divs[0] - col1X - 20;
+  let col1FontSize = 13;
+  ctx.font = `800 ${col1FontSize}px ${fonts.display}`;
+  while (
+    (ctx.measureText(line1.toUpperCase()).width > maxCol1W ||
+      (line2 && ctx.measureText(line2.toUpperCase()).width > maxCol1W)) &&
+    col1FontSize > 9
+  ) {
+    col1FontSize -= 1;
+    ctx.font = `800 ${col1FontSize}px ${fonts.display}`;
+  }
   ctx.fillStyle = COLORS.teal;
-  ctx.font = `800 13px ${fonts.display}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.fillText(line1.toUpperCase(), colCenters[0], colY + 22);
-  if (line2) ctx.fillText(line2.toUpperCase(), colCenters[0], colY + 38);
+  ctx.fillText(line1.toUpperCase(), colCenters[0], colY + 34);
+  if (line2) ctx.fillText(line2.toUpperCase(), colCenters[0], colY + 34 + col1FontSize + 4);
 
   // Col 2: Beach Bag
   beachBag.slice(0, 3).forEach((item, i) => {
-    const itemY = colY + 20 + i * 26;
+    const itemY = colY + 30 + i * 25;
     ctx.font = `400 14px serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = COLORS.ink;
@@ -702,21 +732,36 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   // Col 3: Currently Shipping
   const shipStr = shipping || "BUILDING THE FUTURE";
   const shipWords = shipStr.toUpperCase().split(" ");
-  ctx.fillStyle = COLORS.forestDark;
-  ctx.font = `800 12px ${fonts.display}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  // Wrap up to 2 lines
+  const maxCol3W = col3X - divs[1] - 16;
+  let shipFontSize = 12;
+  ctx.font = `800 ${shipFontSize}px ${fonts.display}`;
+  
+  // Wrap words into lines
   let shLine = "", shLines: string[] = [];
   for (const w of shipWords) {
-    const testLine = shLine + (shLine ? " " : "") + w;
-    if (ctx.measureText(testLine).width > (divs[1] - col3X) * -1 + 110 && shLine) {
-      shLines.push(shLine); shLine = w;
-    } else { shLine = testLine; }
+    const testLine = shLine ? `${shLine} ${w}` : w;
+    if (ctx.measureText(testLine).width > maxCol3W && shLine) {
+      shLines.push(shLine);
+      shLine = w;
+    } else {
+      shLine = testLine;
+    }
   }
-  shLines.push(shLine);
+  if (shLine) shLines.push(shLine);
+
+  while (
+    shLines.some((l) => ctx.measureText(l).width > maxCol3W) &&
+    shipFontSize > 9
+  ) {
+    shipFontSize -= 1;
+    ctx.font = `800 ${shipFontSize}px ${fonts.display}`;
+  }
+
+  ctx.fillStyle = COLORS.forestDark;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
   shLines.slice(0, 3).forEach((l, i) => {
-    ctx.fillText(l, colCenters[2], colY + 20 + i * 18);
+    ctx.fillText(l, colCenters[2], colY + 34 + i * (shipFontSize + 5));
   });
 
   // Bottom separator
@@ -748,7 +793,7 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.fillText("BUILDER ID", CARD_W / 2, botY + 22);
   ctx.fillStyle = COLORS.forestDark;
   ctx.font = `800 16px ${fonts.mono}`;
-  ctx.fillText(`#HH-GOA-${entryNo}`, CARD_W / 2, botY + 44);
+  ctx.fillText(`#GOA-2026-${entryNo}`, CARD_W / 2, botY + 44);
   ctx.fillStyle = COLORS.forestMid;
   ctx.font = `600 9px ${fonts.mono}`;
   ctx.fillText("2:47 PM STUDIO", CARD_W / 2, botY + 62);

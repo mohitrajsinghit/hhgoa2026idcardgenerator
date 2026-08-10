@@ -8,7 +8,8 @@ const FRAME_PAD = 50;
 export const PFP_PHOTO_W = PFP_SIZE - FRAME_PAD * 2;
 export const PFP_PHOTO_H = PFP_SIZE - FRAME_PAD * 2;
 
-const INNER_R = 400;   // circle radius for circular PFP crop
+export const PFP_INNER_R = 400;   // circle radius for circular PFP crop
+const INNER_R = PFP_INNER_R;
 
 function roundRectPath(
   ctx: CanvasRenderingContext2D,
@@ -116,8 +117,13 @@ export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   ctx.lineWidth = 4;
   ctx.stroke();
 
-  // ── Top badge: "HH GOA 2026" ──────────────────────────────────────────
-  const topBadgeW = 360, topBadgeH = 60;
+  // ── Top badge: "HACKER गोवा HOUSE" ──────────────────────────────────
+  const displayFontWithFallback = `${fonts.display}, "Noto Sans Devanagari", "Segoe UI", sans-serif`;
+  ctx.font = `800 22px ${displayFontWithFallback}`;
+  const badgeText = "HACKER गोवा HOUSE";
+  const textW = ctx.measureText(badgeText).width;
+  const topBadgeW = Math.max(460, textW + 80); // Generous 40px left and right padding
+  const topBadgeH = 60;
   const topBadgeX = CX - topBadgeW / 2;
   const topBadgeY = FRAME_PAD - 26;
 
@@ -131,8 +137,7 @@ export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   ctx.fillStyle = COLORS.white;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `800 22px ${fonts.display}`;
-  ctx.fillText("HACKER गोवा HOUSE", CX, topBadgeY + topBadgeH / 2);
+  ctx.fillText(badgeText, CX, topBadgeY + topBadgeH / 2);
 
   // ── Bottom ribbon: name + title ───────────────────────────────────────
   const botRibbonH = 110;

@@ -13,22 +13,15 @@ Built for the [HH Goa 2026 shortlisting task](.) (Format B: Builder ID Card).
   user and no queue — generation is near-instant regardless of how many
   people use it at once.
 - **Photo positioning is interactive.** Drag to reposition, pinch or scroll
-  to zoom — the crop always fully covers the frame no matter the photo's
-  aspect ratio or orientation.
+  to zoom when hovering/clicking directly on the photo area — scrolling outside
+  the photo allows natural page scrolling, while the crop always fully covers
+  the frame.
 - **HEIC/HEIF (iPhone photos)** are converted to JPEG in the browser
   (`heic2any`) before hitting the canvas.
 - **Download** uses `canvas.toBlob()` → a real downloadable PNG file.
-- **Share to X** tries three strategies, in order:
-  1. **Native share sheet** (`navigator.share` with the image file attached)
-     — used on most phones, including the X app. This is a true attached
-     image, no hosting needed.
-  2. **Desktop fallback:** the PNG is uploaded client-side, directly to
-     Cloudinary (no backend involved — see setup below), and a tweet intent
-     opens linking to this app's `/share` page, which sets Open Graph /
-     Twitter Card meta tags to that image so the link preview shows the
-     actual badge.
-  3. **No Cloudinary configured:** the badge downloads and a text-only tweet
-     intent opens, asking the user to attach the file manually.
+- **Share to X**:
+  1. **Mobile devices:** Uses the native share sheet (`navigator.share` with the image file attached), seamlessly launching the X app with the photo attached.
+  2. **PC / Desktop:** Automatically downloads the generated badge to the user's Downloads folder and opens a dedicated interactive modal popup with **one-click copy to clipboard** for the formatted tweet content, a step-by-step posting checklist, and a direct button to **Open X & Create Post**.
 
 Because generation is client-side and hosting is offloaded to Cloudinary's
 CDN, this scales to a lot of concurrent users on Vercel's free tier without
@@ -78,12 +71,12 @@ No other configuration needed — it's a stock Next.js app.
 ## Customizing
 
 - **Palette / fonts:** `lib/theme.ts` (colors) and `lib/fonts.ts` (Google
-  Fonts — Space Grotesk / JetBrains Mono / Inter).
-- **Card layout & size:** `lib/cardLayout.ts` (currently 1200×628, which also
-  doubles as a good Open Graph image size).
-- **Card drawing:** `lib/drawCard.ts` — everything is drawn with the Canvas
-  2D API, so it's easy to add/remove elements (stamp, barcode, perforation,
-  etc.).
+  Fonts — Syne / JetBrains Mono / Inter).
+- **Card layout & size:** `lib/cardLayout.ts` (800×1120 portrait builder pass).
+- **Card drawing & boundaries:** `lib/drawCard.ts` — Canvas 2D rendering with dynamic auto-fitting for titles, badges, side illustrations (palm trees, signposts, Goa house), and columns to ensure all content stays well within margins without overflow clipping.
+- **PFP Frame:** `lib/drawPfpFrame.ts` — Square 1000×1000 avatar frame generation.
+- **Mobile Responsive Layout:** `app/globals.css` — adaptive topbar, dynamic hero typography clamping, stacked action buttons, seamless touch scroll across preview with `touch-action: pan-y`, and refined footer alignment for small screens.
+- **Scroll to Top:** Floating smooth scroll-to-top action button that appears automatically when scrolled down.
 - **Builder titles:** `lib/titles.ts` — keyword-matched pools based on the
   stack/role field, with a shuffle fallback.
 

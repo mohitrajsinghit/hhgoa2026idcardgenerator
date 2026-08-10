@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { renderCard } from "@/lib/drawCard";
-import { renderPfpFrame, PFP_SIZE, PFP_PHOTO_W, PFP_PHOTO_H } from "@/lib/drawPfpFrame";
-import { CARD_W, CARD_H, PHOTO_W, PHOTO_H } from "@/lib/cardLayout";
+import { renderPfpFrame, PFP_SIZE, PFP_PHOTO_W, PFP_PHOTO_H, PFP_INNER_R } from "@/lib/drawPfpFrame";
+import { CARD_W, CARD_H, PHOTO_W, PHOTO_H, PHOTO_CX, PHOTO_CY, PHOTO_R } from "@/lib/cardLayout";
 import {
   PhotoTransform,
   defaultTransform,
@@ -11,7 +11,14 @@ import {
   MIN_ZOOM,
   MAX_ZOOM,
 } from "@/lib/photoTransform";
-import { generateBuilderTitle, generateEntryNumber, generateBeachBag, BeachItem } from "@/lib/titles";
+import {
+  generateBuilderTitle,
+  generateEntryNumber,
+  generateBeachBag,
+  BeachItem,
+  DEFAULT_TITLE,
+  DEFAULT_ENTRY_NO,
+} from "@/lib/titles";
 import { loadImageFile } from "@/lib/loadImageFile";
 import { cloudinaryConfigured, uploadToCloudinary } from "@/lib/cloudinary";
 import { displayFont, monoFont, bodyFont } from "@/lib/fonts";
@@ -43,12 +50,15 @@ export default function Page() {
   const [handle, setHandle] = useState("");
   const [stack, setStack] = useState("");
   const [shipping, setShipping] = useState("");
-  const [title, setTitle] = useState(() => generateBuilderTitle(""));
+  const [title, setTitle] = useState(DEFAULT_TITLE);
   const [beachBag, setBeachBag] = useState<BeachItem[]>(() => generateBeachBag(""));
-  const [entryNo] = useState(() => generateEntryNumber(String(Math.random())));
+  const [entryNo, setEntryNo] = useState(DEFAULT_ENTRY_NO);
 
   const [dragging, setDragging] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<"" | "photo" | "download" | "share">("");
   const [status, setStatus] = useState<{ text: string; error?: boolean }>({
     text: "",
@@ -59,7 +69,29 @@ export default function Page() {
 
   useEffect(() => {
     document.fonts.ready.then(() => setFontsReady(true));
+    // Generate unique random entry number on client mount safely
+    setEntryNo(generateEntryNumber(String(Math.random())));
+
+    const onScroll = () => {
+      setShowScrollTop(window.scrollY > 280);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const copyPostText = async () => {
+    try {
+      await navigator.clipboard.writeText(caption());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setStatus({ text: "Failed to copy to clipboard.", error: true });
+    }
+  };
 
   const curW = format === "badge" ? CARD_W : PFP_SIZE;
   const curH = format === "badge" ? CARD_H : PFP_SIZE;
@@ -149,6 +181,16 @@ export default function Page() {
     return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
   }
 
+  function isPointInsidePhoto(pt: { x: number; y: number }, currentFormat: "badge" | "pfp"): boolean {
+    if (currentFormat === "badge") {
+      return Math.hypot(pt.x - PHOTO_CX, pt.y - PHOTO_CY) <= PHOTO_R + 15;
+    } else {
+      const cx = PFP_SIZE / 2;
+      const cy = PFP_SIZE / 2;
+      return Math.hypot(pt.x - cx, pt.y - cy) <= PFP_INNER_R + 20;
+    }
+  }
+
   const applyPanDelta = (dx: number, dy: number) => {
     if (!photoImg) return;
     setTransform((t) =>
@@ -172,6 +214,9 @@ export default function Page() {
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!photoImg) return;
+    const pt = canvasPointFromClient(e.clientX, e.clientY);
+    if (!isPointInsidePhoto(pt, format)) return;
+
     (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) {
@@ -186,7 +231,14 @@ export default function Page() {
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!pointers.current.has(e.pointerId)) return;
+    if (!pointers.current.has(e.pointerId)) {
+      if (photoImg) {
+        const pt = canvasPointFromClient(e.clientX, e.clientY);
+        const inside = isPointInsidePhoto(pt, format);
+        (e.target as HTMLCanvasElement).style.cursor = inside ? "grab" : "default";
+      }
+      return;
+    }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (pointers.current.size === 2 && pinchStart.current) {
@@ -199,44 +251,53 @@ export default function Page() {
     }
 
     if (pointers.current.size === 1 && dragLast.current) {
-      const a = canvasPointFromClient(dragLast.current.x, dragLast.current.y);
-      const b = canvasPointFromClient(e.clientX, e.clientY);
-      applyPanDelta(b.x - a.x, b.y - a.y);
+      const dx = e.clientX - dragLast.current.x;
+      const dy = e.clientY - dragLast.current.y;
       dragLast.current = { x: e.clientX, y: e.clientY };
+      applyPanDelta(dx, dy);
     }
   };
 
-  const endPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     pointers.current.delete(e.pointerId);
     if (pointers.current.size === 0) {
       setDragging(false);
       dragLast.current = null;
-    }
-    if (pointers.current.size < 2) {
+      pinchStart.current = null;
+      if (photoImg) {
+        const pt = canvasPointFromClient(e.clientX, e.clientY);
+        const inside = isPointInsidePhoto(pt, format);
+        (e.target as HTMLCanvasElement).style.cursor = inside ? "grab" : "default";
+      }
+    } else if (pointers.current.size === 1) {
+      const remaining = Array.from(pointers.current.values())[0];
+      dragLast.current = { x: remaining.x, y: remaining.y };
       pinchStart.current = null;
     }
   };
 
-  // Bug #3: onWheel MUST read the current zoom from transformRef, not the stale
-  // closed-over `transform` state value. Without this, fast wheel scrolls
-  // accumulate from an outdated baseline and zoom snaps or feels laggy.
-  //
-  // Bug #9: React attaches JSX onWheel listeners as passive (can't preventDefault).
-  // We register a non-passive native listener via useEffect instead, and keep
-  // this JSX handler only as a no-op placeholder so React knows to attach the
-  // canvas element attribute (helps with SSR / event delegation).
+  const endPointer = onPointerUp;
+  const onPointerCancel = onPointerUp;
+
+  // Zoom via mouse wheel is attached as a non-passive listener in useEffect so e.preventDefault() works.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const handler = (e: WheelEvent) => {
       if (!photoImg) return;
-      e.preventDefault(); // Works here because the listener is non-passive.
+      // Only zoom when the mouse pointer is hovering inside the photo boundary.
+      // Outside the photo, allow default mouse scroll to scroll the webpage naturally.
+      const pt = canvasPointFromClient(e.clientX, e.clientY);
+      if (!isPointInsidePhoto(pt, format)) {
+        return;
+      }
+      e.preventDefault(); // Intercept and zoom only when hovering directly on the photo.
       applyZoomTo(clamp(transformRef.current.zoom - e.deltaY * 0.0015, MIN_ZOOM, MAX_ZOOM));
     };
     canvas.addEventListener("wheel", handler, { passive: false });
     return () => canvas.removeEventListener("wheel", handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photoImg]); // re-register when photo changes (guard check inside handler)
+  }, [photoImg, format, curW, curH]);
 
   // JSX onWheel left intentionally empty — real handler is the non-passive native listener above.
   const onWheel = (_e: React.WheelEvent<HTMLCanvasElement>) => {};
@@ -264,8 +325,15 @@ export default function Page() {
     return (name || "builder").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
   }
 
-  const caption = () =>
-    `I just built my HH Goa 2026 badge — "${title}" 🏝️🛠️ ${HASHTAG}`;
+  const caption = () => {
+    const roleText = stack ? `I'm a ${stack}` : "I'm a builder";
+    const idText = `Builder ID: #GOA-2026-${entryNo}`;
+    const cardTitle =
+      format === "badge"
+        ? "Hacker House Goa 26 ID Card! 🪪"
+        : "Hacker House Goa 26 PFP! 🖼️";
+    return `Hey there, Here is my ${cardTitle}\n\n${roleText}\n${idText}\n\nSee you all in Goa. 🌴☀️🚀\n\n#FrameInGoa #HHGoa2026`;
+  };
 
   const handleDownload = async () => {
     if (!photoImg) {
@@ -305,11 +373,19 @@ export default function Page() {
     try {
       const blob = await canvasToBlob();
 
-      // 1) Native share sheet with the actual image file (best on mobile —
-      // this is a true attached-image share, X app included).
       const file = new File([blob], `hhgoa2026-${fileSlug()}.png`, {
         type: "image/png",
       });
+
+      // Detect mobile browsers (Android, iOS, etc.)
+      const isMobile =
+        typeof navigator !== "undefined" &&
+        (/Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
+          navigator.userAgent || ""
+        ) ||
+          (navigator.maxTouchPoints > 1 &&
+            /Macintosh/i.test(navigator.userAgent || "")));
+
       const nav = navigator as Navigator & {
         canShare?: (data: { files: File[] }) => boolean;
         share?: (data: {
@@ -319,7 +395,8 @@ export default function Page() {
         }) => Promise<void>;
       };
 
-      if (nav.canShare?.({ files: [file] }) && nav.share) {
+      // 1) Mobile device share: uses the native OS share sheet (X mobile app)
+      if (isMobile && nav.canShare?.({ files: [file] }) && nav.share) {
         await nav.share({
           files: [file],
           text: caption(),
@@ -329,25 +406,9 @@ export default function Page() {
         return;
       }
 
-      // 2) Desktop / unsupported: upload so the tweet link unfurls with the
-      // actual graphic, then open a pre-filled tweet intent.
-      if (cloudinaryConfigured()) {
-        setStatus({ text: "Uploading your badge…" });
-        const imgUrl = await uploadToCloudinary(blob);
-        const shareUrl = `${window.location.origin}/share?img=${encodeURIComponent(
-          imgUrl
-        )}&name=${encodeURIComponent(name)}&title=${encodeURIComponent(title)}`;
-        const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          caption()
-        )}&url=${encodeURIComponent(shareUrl)}`;
-        window.open(tweetUrl, "_blank", "noopener,noreferrer");
-        setStatus({ text: "Opening X…" });
-        return;
-      }
-
-      // 3) Last resort: download the file and open a text-only tweet intent.
+      // 2) PC / Desktop / Laptop workflow:
+      // Always trigger automatic download of the ID card PNG
       const url = URL.createObjectURL(blob);
-      // Bug #6: same anchor DOM-append fix as handleDownload.
       const a = document.createElement("a");
       a.href = url;
       a.download = `hhgoa2026-${fileSlug()}.png`;
@@ -356,12 +417,11 @@ export default function Page() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        caption()
-      )}`;
-      window.open(tweetUrl, "_blank", "noopener,noreferrer");
+
+      // Open the interactive desktop Share Modal Popup
+      setShowShareModal(true);
       setStatus({
-        text: "Badge downloaded — attach it to the tweet that just opened.",
+        text: "Badge downloaded! Copy text and share on X.",
       });
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
@@ -599,14 +659,67 @@ export default function Page() {
               onClick={handleDownload}
               disabled={!photoImg || busy !== ""}
             >
-              {busy === "download" ? "Saving…" : "⬇ Download"}
+              {busy === "download" ? (
+                "Saving…"
+              ) : (
+                <>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span>Download</span>
+                </>
+              )}
             </button>
             <button
               className="btn btn-primary"
               onClick={handleShare}
               disabled={!photoImg || busy !== ""}
             >
-              {busy === "share" ? "Sharing…" : "𝕏 Share to X"}
+              {busy === "share" ? (
+                "Sharing…"
+              ) : (
+                <>
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                  </svg>
+                  <span>Share to</span>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
 
@@ -622,6 +735,112 @@ export default function Page() {
           hhgoa.com
         </a>
       </footer>
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="scroll-top-btn"
+          onClick={scrollToTop}
+          aria-label="Scroll to top"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+      )}
+
+      {/* ── Desktop Share to X Modal Popup ────────────────────────── */}
+      {showShareModal && (
+        <div className="modal-backdrop" onClick={() => setShowShareModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setShowShareModal(false)}
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+
+            <div className="modal-header">
+              <div className="modal-icon">𝕏</div>
+              <div className="modal-title-group">
+                <h3>Share to X / Twitter</h3>
+                <p className="modal-subtitle">
+                  Your ID badge has been downloaded automatically!
+                </p>
+              </div>
+            </div>
+
+            <div className="modal-steps">
+              <div className="step-item step-done">
+                <span className="step-badge">1</span>
+                <span>ID badge saved to Downloads folder ✅</span>
+              </div>
+              <div className="step-item">
+                <span className="step-badge">2</span>
+                <span>Copy the pre-generated post content below</span>
+              </div>
+              <div className="step-item">
+                <span className="step-badge">3</span>
+                <span>Click &quot;Open X to Post&quot; and attach your badge</span>
+              </div>
+            </div>
+
+            <div className="post-preview-box">
+              <div className="post-preview-header">
+                <span>Generated Post Content</span>
+                <button
+                  type="button"
+                  className="copy-chip"
+                  onClick={copyPostText}
+                >
+                  {copied ? "✅ Copied!" : "📋 Copy Text"}
+                </button>
+              </div>
+              <pre className="post-preview-text">{caption()}</pre>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={copyPostText}
+              >
+                {copied ? "✅ Copied!" : "📋 Copy Post Text"}
+              </button>
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(caption())}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+                onClick={() => setShowShareModal(false)}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                <span>Open X to Post</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
