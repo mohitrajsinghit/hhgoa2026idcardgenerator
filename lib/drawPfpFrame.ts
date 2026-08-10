@@ -1,0 +1,212 @@
+import { COLORS } from "./theme";
+import { PhotoTransform, resolvePan } from "./photoTransform";
+import { CardFonts } from "./drawCard";
+
+export const PFP_SIZE = 1000;
+const FRAME_PAD = 50;
+
+export const PFP_PHOTO_W = PFP_SIZE - FRAME_PAD * 2;
+export const PFP_PHOTO_H = PFP_SIZE - FRAME_PAD * 2;
+
+const INNER_R = 400;   // circle radius for circular PFP crop
+
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function sparkle(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, color: string) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.translate(cx, cy);
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * Math.PI) / 4;
+    const r = i % 2 === 0 ? size : size * 0.38;
+    if (i === 0) ctx.moveTo(r * Math.cos(angle), r * Math.sin(angle));
+    else ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+export type PfpData = {
+  photoImg: HTMLImageElement;
+  transform: PhotoTransform;
+  name: string;
+  title: string;
+  fonts: CardFonts;
+};
+
+export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
+  const { photoImg, transform, name, title, fonts } = data;
+  const CX = PFP_SIZE / 2, CY = PFP_SIZE / 2;
+
+  ctx.clearRect(0, 0, PFP_SIZE, PFP_SIZE);
+
+  // ── Outer rounded clip ────────────────────────────────────────────────
+  ctx.save();
+  roundRectPath(ctx, 0, 0, PFP_SIZE, PFP_SIZE, 44);
+  ctx.clip();
+
+  // Background — dark forest green
+  ctx.fillStyle = COLORS.forestDark;
+  ctx.fillRect(0, 0, PFP_SIZE, PFP_SIZE);
+
+  // Gradient overlay
+  const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, PFP_SIZE * 0.7);
+  grad.addColorStop(0, "rgba(26,74,46,0.8)");
+  grad.addColorStop(1, "rgba(8,32,20,0.95)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, PFP_SIZE, PFP_SIZE);
+
+  // ── Circular photo ────────────────────────────────────────────────────
+  // Outer yellow ring
+  ctx.beginPath();
+  ctx.arc(CX, CY, INNER_R + 20, 0, Math.PI * 2);
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 6;
+  ctx.setLineDash([10, 10]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Pink ring
+  ctx.beginPath();
+  ctx.arc(CX, CY, INNER_R + 8, 0, Math.PI * 2);
+  ctx.strokeStyle = COLORS.pink;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Photo clip
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CX, CY, INNER_R, 0, Math.PI * 2);
+  ctx.clip();
+
+  const boxW = INNER_R * 2, boxH = INNER_R * 2;
+  const { displayedW, displayedH, offsetX, offsetY } = resolvePan(
+    photoImg.naturalWidth, photoImg.naturalHeight,
+    boxW, boxH, transform
+  );
+  ctx.drawImage(
+    photoImg,
+    CX - boxW / 2 + (boxW - displayedW) / 2 - offsetX,
+    CY - boxH / 2 + (boxH - displayedH) / 2 - offsetY,
+    displayedW, displayedH
+  );
+  ctx.restore();
+
+  // Photo border
+  ctx.beginPath();
+  ctx.arc(CX, CY, INNER_R, 0, Math.PI * 2);
+  ctx.strokeStyle = COLORS.forestDark;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // ── Top badge: "HH GOA 2026" ──────────────────────────────────────────
+  const topBadgeW = 360, topBadgeH = 60;
+  const topBadgeX = CX - topBadgeW / 2;
+  const topBadgeY = FRAME_PAD - 26;
+
+  roundRectPath(ctx, topBadgeX, topBadgeY, topBadgeW, topBadgeH, topBadgeH / 2);
+  ctx.fillStyle = COLORS.pink;
+  ctx.fill();
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = COLORS.white;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `800 22px ${fonts.display}`;
+  ctx.fillText("HACKER गोवा HOUSE", CX, topBadgeY + topBadgeH / 2);
+
+  // ── Bottom ribbon: name + title ───────────────────────────────────────
+  const botRibbonH = 110;
+  const botRibbonY = PFP_SIZE - FRAME_PAD - botRibbonH + 10;
+  const botRibbonX = FRAME_PAD - 10;
+  const botRibbonW = PFP_SIZE - (FRAME_PAD - 10) * 2;
+
+  roundRectPath(ctx, botRibbonX, botRibbonY, botRibbonW, botRibbonH, 20);
+  ctx.fillStyle = "rgba(8,32,20,0.92)";
+  ctx.fill();
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+
+  const nameStr = (name || "BUILDER").toUpperCase();
+  ctx.fillStyle = COLORS.cream;
+  ctx.font = `800 32px ${fonts.display}`;
+  ctx.textBaseline = "top";
+  ctx.fillText(nameStr, CX, botRibbonY + 18);
+
+  const subStr = title || "HH GOA 2026 · #FrameInGoa";
+  ctx.fillStyle = COLORS.yellow;
+  ctx.font = `600 16px ${fonts.mono}`;
+  ctx.fillText(subStr, CX, botRibbonY + 62);
+
+  // ── Stamp badge (top-right) ───────────────────────────────────────────
+  ctx.save();
+  ctx.setLineDash([]);
+  const stampCx = PFP_SIZE - FRAME_PAD - 60;
+  const stampCy = FRAME_PAD + 60;
+  ctx.translate(stampCx, stampCy);
+  ctx.rotate((12 * Math.PI) / 180);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 52, 0, Math.PI * 2);
+  ctx.fillStyle = COLORS.pink;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 44, 0, Math.PI * 2);
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = COLORS.white;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `800 12px ${fonts.mono}`;
+  ctx.fillText("BUILDER", 0, -10);
+  ctx.font = `700 11px ${fonts.mono}`;
+  ctx.fillText("2026", 0, 8);
+  ctx.restore();
+
+  // ── Sparkles ──────────────────────────────────────────────────────────
+  sparkle(ctx, 80, 80, 18, COLORS.yellow);
+  sparkle(ctx, PFP_SIZE - 80, 80, 18, COLORS.yellow);
+  sparkle(ctx, 80, PFP_SIZE - 200, 14, COLORS.pink);
+  sparkle(ctx, PFP_SIZE - 80, PFP_SIZE - 200, 14, COLORS.pink);
+  sparkle(ctx, CX - 30, topBadgeY - 22, 10, COLORS.yellow);
+  sparkle(ctx, CX + 30, topBadgeY - 22, 10, COLORS.yellow);
+
+  // ── #FRAMEINGOA footer bar ───────────────────────────────────────────
+  const ftrY = PFP_SIZE - 48;
+  ctx.fillStyle = COLORS.pink;
+  ctx.fillRect(FRAME_PAD, ftrY, PFP_SIZE - FRAME_PAD * 2, 34);
+  ctx.fillStyle = COLORS.white;
+  ctx.font = `800 14px ${fonts.display}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("#FRAMEINGOA", CX, ftrY + 17);
+
+  ctx.restore(); // outer clip
+}
