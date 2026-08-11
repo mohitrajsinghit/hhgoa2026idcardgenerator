@@ -8,7 +8,7 @@ const FRAME_PAD = 50;
 export const PFP_PHOTO_W = PFP_SIZE - FRAME_PAD * 2;
 export const PFP_PHOTO_H = PFP_SIZE - FRAME_PAD * 2;
 
-export const PFP_INNER_R = 400;   // circle radius for circular PFP crop
+export const PFP_INNER_R = 350;// circle radius for circular PFP crop
 const INNER_R = PFP_INNER_R;
 
 function roundRectPath(
@@ -74,8 +74,76 @@ export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, PFP_SIZE, PFP_SIZE);
 
-  // ── Circular photo ────────────────────────────────────────────────────
-  // Outer yellow ring
+  // ── Sparkles ──────────────────────────────────────────────────────────
+  sparkle(ctx, 80, 80, 18, COLORS.yellow);
+  sparkle(ctx, PFP_SIZE - 80, 80, 18, COLORS.yellow);
+  sparkle(ctx, 80, PFP_SIZE - 200, 14, COLORS.pink);
+  sparkle(ctx, PFP_SIZE - 80, PFP_SIZE - 200, 14, COLORS.pink);
+
+  // ── Top badge: "HACKER HOUSE गोवा" ──────────────────────────────────
+  const displayFontWithFallback = `${fonts.display}, "Noto Sans Devanagari", "Segoe UI", sans-serif`;
+  ctx.font = `800 24px ${displayFontWithFallback}`;
+  const badgeText = "HACKER HOUSE गोवा";
+  const textW = ctx.measureText(badgeText).width;
+  const topBadgeW = Math.max(480, textW + 80);
+  const topBadgeH = 64;
+  const topBadgeX = CX - topBadgeW / 2;
+  const topBadgeY = FRAME_PAD - 28;
+
+  roundRectPath(ctx, topBadgeX, topBadgeY, topBadgeW, topBadgeH, topBadgeH / 2);
+  ctx.fillStyle = COLORS.pink;
+  ctx.fill();
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+
+  ctx.fillStyle = COLORS.white;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(badgeText, CX, topBadgeY + topBadgeH / 2);
+
+  // Sparkles near top badge
+  sparkle(ctx, CX - topBadgeW / 2 - 25, topBadgeY + topBadgeH / 2, 10, COLORS.yellow);
+  sparkle(ctx, CX + topBadgeW / 2 + 25, topBadgeY + topBadgeH / 2, 10, COLORS.yellow);
+
+  // ── Bottom ribbon: name + title ───────────────────────────────────────
+  const botRibbonH = 110;
+  const botRibbonY = PFP_SIZE - FRAME_PAD - botRibbonH + 10;
+  const botRibbonX = FRAME_PAD - 10;
+  const botRibbonW = PFP_SIZE - (FRAME_PAD - 10) * 2;
+
+  roundRectPath(ctx, botRibbonX, botRibbonY, botRibbonW, botRibbonH, 20);
+  ctx.fillStyle = "rgba(8,32,20,0.92)";
+  ctx.fill();
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+
+  const nameStr = (name || "BUILDER").toUpperCase();
+  ctx.fillStyle = COLORS.cream;
+  ctx.font = `800 32px ${fonts.display}`;
+  ctx.textBaseline = "top";
+  ctx.fillText(nameStr, CX, botRibbonY + 18);
+
+  const subStr = title || "HH GOA 2026 · #FrameInGoa";
+  ctx.fillStyle = COLORS.yellow;
+  ctx.font = `600 16px ${fonts.mono}`;
+  ctx.fillText(subStr, CX, botRibbonY + 62);
+
+  // ── #FRAMEINGOA footer bar ───────────────────────────────────────────
+  const ftrY = PFP_SIZE - 48;
+  ctx.fillStyle = COLORS.pink;
+  ctx.fillRect(FRAME_PAD, ftrY, PFP_SIZE - FRAME_PAD * 2, 34);
+  ctx.fillStyle = COLORS.white;
+  ctx.font = `800 14px ${fonts.display}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("#FRAMEINGOA", CX, ftrY + 17);
+
+  // ── Circular photo (Layered on top to overlap bottom ribbon) ─────────
+  // Outer yellow dashed ring
   ctx.beginPath();
   ctx.arc(CX, CY, INNER_R + 20, 0, Math.PI * 2);
   ctx.strokeStyle = COLORS.yellow;
@@ -117,54 +185,6 @@ export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   ctx.lineWidth = 4;
   ctx.stroke();
 
-  // ── Top badge: "HACKER गोवा HOUSE" ──────────────────────────────────
-  const displayFontWithFallback = `${fonts.display}, "Noto Sans Devanagari", "Segoe UI", sans-serif`;
-  ctx.font = `800 22px ${displayFontWithFallback}`;
-  const badgeText = "HACKER गोवा HOUSE";
-  const textW = ctx.measureText(badgeText).width;
-  const topBadgeW = Math.max(460, textW + 80); // Generous 40px left and right padding
-  const topBadgeH = 60;
-  const topBadgeX = CX - topBadgeW / 2;
-  const topBadgeY = FRAME_PAD - 26;
-
-  roundRectPath(ctx, topBadgeX, topBadgeY, topBadgeW, topBadgeH, topBadgeH / 2);
-  ctx.fillStyle = COLORS.pink;
-  ctx.fill();
-  ctx.strokeStyle = COLORS.yellow;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = COLORS.white;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(badgeText, CX, topBadgeY + topBadgeH / 2);
-
-  // ── Bottom ribbon: name + title ───────────────────────────────────────
-  const botRibbonH = 110;
-  const botRibbonY = PFP_SIZE - FRAME_PAD - botRibbonH + 10;
-  const botRibbonX = FRAME_PAD - 10;
-  const botRibbonW = PFP_SIZE - (FRAME_PAD - 10) * 2;
-
-  roundRectPath(ctx, botRibbonX, botRibbonY, botRibbonW, botRibbonH, 20);
-  ctx.fillStyle = "rgba(8,32,20,0.92)";
-  ctx.fill();
-  ctx.strokeStyle = COLORS.yellow;
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  ctx.textAlign = "center";
-
-  const nameStr = (name || "BUILDER").toUpperCase();
-  ctx.fillStyle = COLORS.cream;
-  ctx.font = `800 32px ${fonts.display}`;
-  ctx.textBaseline = "top";
-  ctx.fillText(nameStr, CX, botRibbonY + 18);
-
-  const subStr = title || "HH GOA 2026 · #FrameInGoa";
-  ctx.fillStyle = COLORS.yellow;
-  ctx.font = `600 16px ${fonts.mono}`;
-  ctx.fillText(subStr, CX, botRibbonY + 62);
-
   // ── Stamp badge (top-right) ───────────────────────────────────────────
   ctx.save();
   ctx.setLineDash([]);
@@ -194,24 +214,6 @@ export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   ctx.font = `700 11px ${fonts.mono}`;
   ctx.fillText("2026", 0, 8);
   ctx.restore();
-
-  // ── Sparkles ──────────────────────────────────────────────────────────
-  sparkle(ctx, 80, 80, 18, COLORS.yellow);
-  sparkle(ctx, PFP_SIZE - 80, 80, 18, COLORS.yellow);
-  sparkle(ctx, 80, PFP_SIZE - 200, 14, COLORS.pink);
-  sparkle(ctx, PFP_SIZE - 80, PFP_SIZE - 200, 14, COLORS.pink);
-  sparkle(ctx, CX - 30, topBadgeY - 22, 10, COLORS.yellow);
-  sparkle(ctx, CX + 30, topBadgeY - 22, 10, COLORS.yellow);
-
-  // ── #FRAMEINGOA footer bar ───────────────────────────────────────────
-  const ftrY = PFP_SIZE - 48;
-  ctx.fillStyle = COLORS.pink;
-  ctx.fillRect(FRAME_PAD, ftrY, PFP_SIZE - FRAME_PAD * 2, 34);
-  ctx.fillStyle = COLORS.white;
-  ctx.font = `800 14px ${fonts.display}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("#FRAMEINGOA", CX, ftrY + 17);
 
   ctx.restore(); // outer clip
 }

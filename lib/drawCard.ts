@@ -30,6 +30,30 @@ export type CardData = {
 // Small helpers
 // ─────────────────────────────────────────────
 
+let rightSealImgCache: HTMLImageElement | null = null;
+
+function getRightSealImg(
+  ctx?: CanvasRenderingContext2D,
+  sealX?: number,
+  sealY?: number,
+  sealW?: number,
+  sealH?: number
+): HTMLImageElement | null {
+  if (typeof window === "undefined") return null;
+  if (!rightSealImgCache) {
+    const img = new Image();
+    img.src = "/179-vector-54-30944.svg";
+    img.onload = () => {
+      rightSealImgCache = img;
+      if (ctx && sealX !== undefined && sealY !== undefined && sealW && sealH) {
+        ctx.drawImage(img, sealX, sealY, sealW, sealH);
+      }
+    };
+    rightSealImgCache = img;
+  }
+  return rightSealImgCache;
+}
+
 function pill(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number, r: number
@@ -325,10 +349,21 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.fillStyle = COLORS.yellow;
   ctx.fillRect(IL, IT + HDR_H, IW, 3);
 
-  // ── 2a. "HH GOA 2026" pink badge (top-center) ───────────────────────
-  const badgeW = 180, badgeH = 40, badgeR = 20;
+  // ── 2a. Black lanyard cutout slot (top-center) ────────────────────────
+  const slotW =90, slotH = 20, slotR = 8;
+  const slotX = CARD_W / 2 - slotW / 2;
+  const slotY = IT + 10;
+  pill(ctx, slotX, slotY, slotW, slotH, slotR);
+  ctx.fillStyle = "#000000";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // ── 2b. "HH GOA 2026" pink badge (brought down below cutout slot) ─────
+  const badgeW = 180, badgeH = 38, badgeR = 19;
   const badgeX = CARD_W / 2 - badgeW / 2;
-  const badgeY = IT + 14;
+  const badgeY = IT + 54;
   pill(ctx, badgeX, badgeY, badgeW, badgeH, badgeR);
   ctx.fillStyle = COLORS.pink;
   ctx.fill();
@@ -340,9 +375,9 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = `800 14px ${fonts.mono}`;
-  ctx.fillText("HH  GOA  2026", CARD_W / 2, badgeY + badgeH / 2);
+  ctx.fillText("HHGOA-2026", CARD_W / 2, badgeY + badgeH / 2);
 
-  // ── 2b. Left stamp — "GOA INDIA" ────────────────────────────────────
+  // ── 2c. Left stamp — "GOA INDIA" ────────────────────────────────────
   const stX = IL + 22, stY = IT + 14, stW = 80, stH = 88;
   ctx.strokeStyle = COLORS.yellow;
   ctx.lineWidth = 2.5;
@@ -369,46 +404,25 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
     ctx.stroke();
   });
 
-  // ── 2c. Right circular seal ──────────────────────────────────────────
-  const sealCx = IL + IW - 56, sealCy = IT + 60, sealR = 44;
-  ctx.strokeStyle = COLORS.yellow;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(sealCx, sealCy, sealR, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(sealCx, sealCy, sealR - 8, 0, Math.PI * 2);
-  ctx.setLineDash([3, 4]);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // ── 2d. Right vector graphic (179-vector-54-30944.svg) ────────────────
+  const rightW = 96, rightH = 84;
+  const rightX = IL + IW - rightW - 16;
+  const rightY = IT + (HDR_H - rightH) / 2;
 
-  // Curved text "BUILD IN GOA" (top arc)
-  ctx.fillStyle = COLORS.yellow;
-  ctx.font = `700 8px ${fonts.mono}`;
-  const arcText = "BUILD IN GOA · SHIP FROM PARADISE ·";
-  const arcLen = arcText.length;
-  for (let i = 0; i < arcLen; i++) {
-    const angle = (i / arcLen) * Math.PI * 2 - Math.PI / 2;
-    ctx.save();
-    ctx.translate(sealCx + (sealR - 5) * Math.cos(angle), sealCy + (sealR - 5) * Math.sin(angle));
-    ctx.rotate(angle + Math.PI / 2);
-    ctx.fillText(arcText[i], 0, 0);
-    ctx.restore();
+  const rightSeal = getRightSealImg(ctx, rightX, rightY, rightW, rightH);
+  if (rightSeal && rightSeal.complete && rightSeal.naturalWidth > 0) {
+    ctx.drawImage(rightSeal, rightX, rightY, rightW, rightH);
   }
-  ctx.font = "18px serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("🌴", sealCx, sealCy);
 
-  // ── 3. "HACKER गोवा HOUSE" title ────────────────────────────────────
+  // ── 3. "HACKER HOUSE गोवा" title ────────────────────────────────────
   const titleY = IT + HDR_H + 4;
-  const titleH = 100;
+  const titleH = 78;
 
   const displayFontWithFallback = `${fonts.display}, "Noto Sans Devanagari", "Segoe UI", sans-serif`;
 
   // Dynamically calculate font sizes so the entire title fits comfortably within inner width
-  const maxTitleW = IW - 48; // Max 724px
-  let baseFontSize = 52;
+  const maxTitleW = IW - 40; // Max 732px
+  let baseFontSize = 42;
   let hackerFont = `800 ${baseFontSize}px ${fonts.display}`;
   let goaFont = `800 ${Math.round(baseFontSize * 0.78)}px ${displayFontWithFallback}`;
 
@@ -418,9 +432,9 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.font = goaFont;
   let goaW = ctx.measureText("गोवा").width;
   let gap = Math.round(baseFontSize * 0.22);
-  let totalTitleW = hackerW + gap + goaW + gap + houseW;
+  let totalTitleW = hackerW + gap + houseW + gap + goaW;
 
-  while (totalTitleW > maxTitleW && baseFontSize > 24) {
+  while (totalTitleW > maxTitleW && baseFontSize > 20) {
     baseFontSize -= 1;
     hackerFont = `800 ${baseFontSize}px ${fonts.display}`;
     goaFont = `800 ${Math.round(baseFontSize * 0.78)}px ${displayFontWithFallback}`;
@@ -430,11 +444,11 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
     ctx.font = goaFont;
     goaW = ctx.measureText("गोवा").width;
     gap = Math.round(baseFontSize * 0.22);
-    totalTitleW = hackerW + gap + goaW + gap + houseW;
+    totalTitleW = hackerW + gap + houseW + gap + goaW;
   }
 
   let tx = (CARD_W - totalTitleW) / 2;
-  const titleBaseline = titleY + titleH - 18;
+  const titleBaseline = titleY + 44;
 
   // Draw "HACKER"
   ctx.font = hackerFont;
@@ -443,6 +457,12 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.textBaseline = "alphabetic";
   ctx.fillText("HACKER", tx, titleBaseline);
   tx += hackerW + gap;
+
+  // Draw "HOUSE"
+  ctx.font = hackerFont;
+  ctx.fillStyle = COLORS.forestDark;
+  ctx.fillText("HOUSE", tx, titleBaseline);
+  tx += houseW + gap;
 
   // Draw "गोवा" in hot pink with slight background treatment
   ctx.font = goaFont;
@@ -454,53 +474,47 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.fill();
   ctx.fillStyle = COLORS.yellow;
   ctx.fillText("गोवा", tx, titleBaseline);
-  tx += goaW + gap;
-
-  // Draw "HOUSE"
-  ctx.font = hackerFont;
-  ctx.fillStyle = COLORS.forestDark;
-  ctx.fillText("HOUSE", tx, titleBaseline);
 
   // Sub-badge row
-  ctx.font = `600 11px ${fonts.mono}`;
+  ctx.font = `600 10.5px ${fonts.mono}`;
   ctx.fillStyle = COLORS.forestMid;
   ctx.textAlign = "center";
-  ctx.fillText("GOA, INDIA  ·  28 – 31 OCT 2026  ·  2:47 PM STUDIO", CARD_W / 2, titleY + titleH + 6);
+  ctx.fillText("GOA, INDIA  ·  28 – 31 OCT 2026  ·  2:47 PM STUDIO", CARD_W / 2, titleY + titleH - 2);
 
   // ── 4. Pink rule above illustration zone ────────────────────────────
   ctx.fillStyle = COLORS.pink;
-  ctx.fillRect(IL, titleY + titleH + 16, IW, 2);
+  ctx.fillRect(IL, titleY + titleH + 6, IW, 2);
 
   // ── 5. Illustration zone ─────────────────────────────────────────────
-  const illY = titleY + titleH + 22;   // ~240
+  const illY = titleY + titleH + 12;
 
-  // Left vertical date strip
+  // Left vertical date strip (font 11px, brought down to illY + 205)
   ctx.save();
   ctx.fillStyle = COLORS.forestMid;
-  ctx.font = `700 10px ${fonts.mono}`;
+  ctx.font = `700 11px ${fonts.mono}`;
   ctx.textAlign = "center";
-  ctx.translate(IL + 24, illY + 170);
+  ctx.translate(IL + 24, illY + 350);
   ctx.rotate(-Math.PI / 2);
   ctx.fillText("28 – 31 OCT 2026", 0, 0);
   ctx.restore();
 
-  // Right vertical "GOA, INDIA"
+  // Right vertical "GOA, INDIA" (font 11px, brought down to illY + 195)
   ctx.save();
   ctx.fillStyle = COLORS.pink;
-  ctx.font = `700 10px ${fonts.mono}`;
+  ctx.font = `700 11px ${fonts.mono}`;
   ctx.textAlign = "center";
-  ctx.translate(IL + IW - 24, illY + 160);
+  ctx.translate(IL + IW - 24, illY + 350);
   ctx.rotate(Math.PI / 2);
   ctx.fillText("GOA, INDIA", 0, 0);
   ctx.restore();
 
-  // ── 5a. Palm trees ──────────────────────────────────────────────────
-  palmTree(ctx, IL + 82, illY + 310, 185, -14, 0.78);
-  palmTree(ctx, IL + 110, illY + 320, 145, -8, 0.72);
-  palmTree(ctx, IL + IW - 92, illY + 295, 175, 12, 0.74);
+  // ── 5a. Palm trees (padded 5px outward on left and right) ───────────
+  palmTree(ctx, IL + 77, illY + 310, 185, -14, 0.78);
+  palmTree(ctx, IL + 105, illY + 320, 145, -8, 0.72);
+  palmTree(ctx, IL + IW - 87, illY + 295, 175, 12, 0.74);
 
-  // ── 5b. Signpost (BUILD / SHIP / REPEAT) ────────────────────────────
-  const spX = IL + 54, spY = illY + 80;
+  // ── 5b. Signpost (BUILD / SHIP / REPEAT) (padded 5px left) ──────────
+  const spX = IL + 49, spY = illY + 80;
   ctx.fillStyle = COLORS.forestDark;
   ctx.fillRect(spX + 34, spY, 5, 155);  // post
 
@@ -509,24 +523,24 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   arrowSign(ctx, "REPEAT", spX - 8, spY + 80, 88, 24, COLORS.yellow, COLORS.forestDark, fonts);
 
   // Stars scattered
-  sparkle(ctx, IL + 155, illY + 52, 9, COLORS.yellow);
-  sparkle(ctx, IL + 190, illY + 160, 7, COLORS.pink);
-  sparkle(ctx, IL + IW - 165, illY + 44, 9, COLORS.yellow);
-  sparkle(ctx, IL + IW - 140, illY + 200, 7, COLORS.pink);
+  sparkle(ctx, IL + 150, illY + 52, 9, COLORS.yellow);
+  sparkle(ctx, IL + 185, illY + 160, 7, COLORS.pink);
+  sparkle(ctx, IL + IW - 160, illY + 44, 9, COLORS.yellow);
+  sparkle(ctx, IL + IW - 135, illY + 200, 7, COLORS.pink);
   sparkle(ctx, CARD_W / 2 - 50, illY + 28, 8, COLORS.gold);
   sparkle(ctx, CARD_W / 2 + 60, illY + 36, 6, COLORS.yellow);
 
   // Diamond dots
-  diamond(ctx, IL + 145, illY + 144, 6, COLORS.pink);
-  diamond(ctx, IL + IW - 150, illY + 130, 6, COLORS.yellow);
+  diamond(ctx, IL + 140, illY + 144, 6, COLORS.pink);
+  diamond(ctx, IL + IW - 145, illY + 130, 6, COLORS.yellow);
 
   // Birds
-  bird(ctx, IL + 150, illY + 30, 5, COLORS.forestMid);
-  bird(ctx, IL + IW - 185, illY + 22, 4, COLORS.forestMid);
+  bird(ctx, IL + 145, illY + 30, 5, COLORS.forestMid);
+  bird(ctx, IL + IW - 180, illY + 22, 4, COLORS.forestMid);
 
   // ── 5c. "LET'S BUILD!" sticker ──────────────────────────────────────
   ctx.save();
-  ctx.translate(IL + IW - 100, illY + 82);
+  ctx.translate(IL + IW - 95, illY + 82);
   ctx.rotate((12 * Math.PI) / 180);
   pill(ctx, -38, -19, 76, 38, 19);
   ctx.fillStyle = COLORS.yellow;
@@ -534,6 +548,7 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.strokeStyle = COLORS.forestDark;
   ctx.lineWidth = 2;
   ctx.stroke();
+
   ctx.fillStyle = COLORS.forestDark;
   ctx.font = `800 10px ${fonts.display}`;
   ctx.textAlign = "center";
@@ -542,9 +557,9 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.fillText("BUILD!", 0, 6);
   ctx.restore();
 
-  // ── 5d. Goa house + scooter (right side) ────────────────────────────
-  goaHouse(ctx, IL + IW - 148, illY + 152, 0.72);
-  scooter(ctx, IL + IW - 142, illY + 285, COLORS.pink);
+  // ── 5d. Goa house + scooter (right side, padded 5px right) ─────────
+  goaHouse(ctx, IL + IW - 143, illY + 152, 0.72);
+  scooter(ctx, IL + IW - 137, illY + 285, COLORS.pink);
 
   // ── 6. Circular photo ───────────────────────────────────────────────
   // Outer decorative ring (yellow dashed)
@@ -686,27 +701,27 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
     (divs[1] + col3X) / 2,
   ];
 
-  // Column labels
+  // Column labels (Increased font size to 10px)
   const colLabels = ["✦ BUILDER CLASS ✦", "✦ BEACH BAG ✦", "✦ CURRENTLY SHIPPING ✦"];
   colLabels.forEach((lbl, i) => {
     ctx.fillStyle = COLORS.pink;
-    ctx.font = `700 9px ${fonts.mono}`;
+    ctx.font = `700 10px ${fonts.mono}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(lbl, colCenters[i], colY + 10);
   });
 
-  // Col 1: Builder Class
+  // Col 1: Builder Class (Increased font size to 14px)
   const titleLines = title.split(" ");
   const line1 = titleLines.slice(0, Math.ceil(titleLines.length / 2)).join(" ");
   const line2 = titleLines.slice(Math.ceil(titleLines.length / 2)).join(" ");
   const maxCol1W = divs[0] - col1X - 20;
-  let col1FontSize = 13;
+  let col1FontSize = 14;
   ctx.font = `800 ${col1FontSize}px ${fonts.display}`;
   while (
     (ctx.measureText(line1.toUpperCase()).width > maxCol1W ||
       (line2 && ctx.measureText(line2.toUpperCase()).width > maxCol1W)) &&
-    col1FontSize > 9
+    col1FontSize > 10
   ) {
     col1FontSize -= 1;
     ctx.font = `800 ${col1FontSize}px ${fonts.display}`;
@@ -717,23 +732,23 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   ctx.fillText(line1.toUpperCase(), colCenters[0], colY + 34);
   if (line2) ctx.fillText(line2.toUpperCase(), colCenters[0], colY + 34 + col1FontSize + 4);
 
-  // Col 2: Beach Bag
+  // Col 2: Beach Bag (Increased font size to 11px)
   beachBag.slice(0, 3).forEach((item, i) => {
     const itemY = colY + 30 + i * 25;
     ctx.font = `400 14px serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = COLORS.ink;
     ctx.fillText(item.emoji, colCenters[1] - 44, itemY);
-    ctx.font = `600 10px ${fonts.mono}`;
+    ctx.font = `600 11px ${fonts.mono}`;
     ctx.fillStyle = COLORS.forestMid;
     ctx.fillText(item.label, colCenters[1] - 22, itemY + 2);
   });
 
-  // Col 3: Currently Shipping
+  // Col 3: Currently Shipping (Increased font size to 13px)
   const shipStr = shipping || "BUILDING THE FUTURE";
   const shipWords = shipStr.toUpperCase().split(" ");
   const maxCol3W = col3X - divs[1] - 16;
-  let shipFontSize = 12;
+  let shipFontSize = 13;
   ctx.font = `800 ${shipFontSize}px ${fonts.display}`;
   
   // Wrap words into lines
@@ -751,7 +766,7 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
 
   while (
     shLines.some((l) => ctx.measureText(l).width > maxCol3W) &&
-    shipFontSize > 9
+    shipFontSize > 10
   ) {
     shipFontSize -= 1;
     ctx.font = `800 ${shipFontSize}px ${fonts.display}`;
@@ -778,27 +793,27 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
   const botY = colY + colH + 8;
   const botH = 80;
 
-  // QR code
+  // QR code (Increased label to 8px)
   qrPlaceholder(ctx, IL + 28, botY + 4, 70);
-  ctx.font = `600 7px ${fonts.mono}`;
+  ctx.font = `600 8px ${fonts.mono}`;
   ctx.fillStyle = COLORS.forestMid;
   ctx.textAlign = "center";
   ctx.fillText("SCAN QR", IL + 28 + 35, botY + 80);
 
-  // Builder ID (center)
+  // Builder ID (center) (Increased labels to 10px, number to 17px, studio to 10px)
   ctx.fillStyle = COLORS.pink;
-  ctx.font = `700 9px ${fonts.mono}`;
+  ctx.font = `700 10px ${fonts.mono}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("BUILDER ID", CARD_W / 2, botY + 22);
   ctx.fillStyle = COLORS.forestDark;
-  ctx.font = `800 16px ${fonts.mono}`;
+  ctx.font = `800 17px ${fonts.mono}`;
   ctx.fillText(`#GOA-2026-${entryNo}`, CARD_W / 2, botY + 44);
   ctx.fillStyle = COLORS.forestMid;
-  ctx.font = `600 9px ${fonts.mono}`;
+  ctx.font = `600 10px ${fonts.mono}`;
   ctx.fillText("2:47 PM STUDIO", CARD_W / 2, botY + 62);
 
-  // Barcode (right)
+  // Barcode (right) (Increased label to 10px)
   ctx.save();
   const barRightX = IL + IW - 28;
   const barStartX = barRightX - 130;
@@ -813,7 +828,7 @@ export function renderCard(ctx: CanvasRenderingContext2D, data: CardData) {
     if (bx > barRightX) break;
   }
   ctx.fillStyle = COLORS.forestMid;
-  ctx.font = `600 9px ${fonts.mono}`;
+  ctx.font = `600 10px ${fonts.mono}`;
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
   ctx.fillText(`NO. ${entryNo}`, barRightX, barTopY + barH + 5);
