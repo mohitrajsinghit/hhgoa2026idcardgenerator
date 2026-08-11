@@ -18,7 +18,7 @@ Built for the [HH Goa 2026 shortlisting task](.) (Format B: Builder ID Card).
   the frame.
 - **HEIC/HEIF (iPhone photos)** are converted to JPEG in the browser
   (`heic2any`) before hitting the canvas.
-- **Download** uses `canvas.toBlob()` → a real downloadable PNG file.
+- **Download & Filename Naming:** Uses `canvas.toBlob()` to output formatted PNG files: `{username}_idcard.png` for Builder ID passes and `{username}_pfp.png` for PFP frames.
 - **Share to X**:
   1. **Mobile devices:** Uses the native share sheet (`navigator.share` with the image file attached), seamlessly launching the X app with the photo attached.
   2. **PC / Desktop:** Automatically downloads the generated badge to the user's Downloads folder and opens a dedicated interactive modal popup with **one-click copy to clipboard** for the formatted tweet content, a step-by-step posting checklist, and a direct button to **Open X & Create Post**.

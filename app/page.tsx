@@ -321,8 +321,15 @@ export default function Page() {
     });
   }
 
-  function fileSlug() {
-    return (name || "builder").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  function getImageFileName() {
+    const rawUser =
+      (name || handle || "username")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "username";
+    const suffix = format === "badge" ? "idcard" : "pfp";
+    return `${rawUser}_${suffix}.png`;
   }
 
   const caption = () => {
@@ -349,7 +356,7 @@ export default function Page() {
       // honour the programmatic .click() — detached anchors are silently ignored.
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hhgoa2026-${fileSlug()}.png`;
+      a.download = getImageFileName();
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
@@ -373,7 +380,7 @@ export default function Page() {
     try {
       const blob = await canvasToBlob();
 
-      const file = new File([blob], `hhgoa2026-${fileSlug()}.png`, {
+      const file = new File([blob], getImageFileName(), {
         type: "image/png",
       });
 
@@ -411,7 +418,7 @@ export default function Page() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hhgoa2026-${fileSlug()}.png`;
+      a.download = getImageFileName();
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
