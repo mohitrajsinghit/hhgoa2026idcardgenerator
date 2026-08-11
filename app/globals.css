@@ -283,8 +283,8 @@ a { color: inherit; }
 /* ── Two-column builder ──────────────────────────────────────*/
 .builder {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 455px);
+  gap: 32px;
   align-items: start;
 }
 
@@ -513,6 +513,7 @@ a { color: inherit; }
   gap: 14px;
   position: sticky;
   top: 20px;
+  width: 100%;
 }
 
 .format-tabs {
@@ -553,6 +554,8 @@ a { color: inherit; }
 .canvas-wrap {
   position: relative;
   width: 100%;
+  max-width: 455px;
+  margin: 0 auto;
   border-radius: 16px;
   overflow: hidden;
   box-shadow:

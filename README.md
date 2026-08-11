@@ -73,6 +73,7 @@ No other configuration needed — it's a stock Next.js app.
 - **Palette / fonts:** `lib/theme.ts` (colors) and `lib/fonts.ts` (Google
   Fonts — Syne / JetBrains Mono / Inter).
 - **Card layout & size:** `lib/cardLayout.ts` (800×1120 portrait builder pass).
+- **Responsive Builder Grid:** `app/globals.css` — side-by-side layout on desktop with the default ID card preview naturally proportioned (`455px × 637px`) to match the exact height of the form panel.
 - **Card drawing & boundaries:** `lib/drawCard.ts` — Canvas 2D rendering with dynamic auto-fitting for titles, badges, side illustrations (palm trees, signposts, Goa house), and columns to ensure all content stays well within margins without overflow clipping.
 - **PFP Frame:** `lib/drawPfpFrame.ts` — Square 1000×1000 avatar frame generation.
 - **Mobile Responsive Layout:** `app/globals.css` — adaptive topbar, dynamic hero typography clamping, stacked action buttons, seamless touch scroll across preview with `touch-action: pan-y`, and refined footer alignment for small screens.
