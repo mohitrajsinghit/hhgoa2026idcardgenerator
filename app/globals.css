@@ -178,39 +178,64 @@ a { color: inherit; }
   margin-bottom: 36px;
   text-align: center;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.hero-title {
-  font-family: var(--font-display), sans-serif;
-  font-weight: 800;
-  font-size: clamp(20px, 4.8vw, 66px);
-  line-height: 1.15;
-  letter-spacing: 0;
-  color: var(--yellow);
-  text-transform: uppercase;
-  margin: 0 auto 14px;
+.hero-logo-container {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.18em;
-  flex-wrap: nowrap;
-  max-width: 100%;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto 16px;
   padding: 0 12px;
   box-sizing: border-box;
 }
 
-.hero-title .goa-hindi {
-  color: var(--yellow);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--pink);
-  padding: 0.04em 0.22em;
-  border-radius: 0.15em;
-  font-style: normal;
-  transform: rotate(-2deg);
-  line-height: 1;
-  box-shadow: 0 4px 12px rgba(255, 0, 122, 0.35);
+.hero-hackerhouse-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  margin: 0 auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.hero-goa-hindi-img {
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  width: clamp(55px, 15%, 145px);
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 6px 18px rgba(255, 0, 122, 0.5));
+  animation: goaFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes goaFloat {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0px) rotate(-1.5deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-10px) rotate(1.5deg) scale(1.06);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .hero-sub {
@@ -241,10 +266,9 @@ a { color: inherit; }
 }
 
 @media (max-width: 500px) {
-  .hero-title {
-    font-size: clamp(16px, 4.6vw, 24px);
-    gap: 0.12em;
+  .hero-logo-container {
     padding: 0 4px;
+    margin-bottom: 12px;
   }
   .hero-sub {
     flex-direction: column;

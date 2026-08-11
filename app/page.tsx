@@ -460,10 +460,18 @@ export default function Page() {
 
       {/* ── Hero ───────────────────────────────────────────────────── */}
       <div className="hero">
-        <h1 className="hero-title">
-          <span>HACKER</span>
-          <span className="goa-hindi">गोवा</span>
-          <span>HOUSE</span>
+        <h1 className="hero-logo-container" aria-label="Hacker House Goa">
+          <img
+            src="/hackerhouse.png"
+            alt="Hacker House"
+            className="hero-hackerhouse-img"
+          />
+          <img
+            src="/goa_hindi.svg"
+            alt="Goa"
+            className="hero-goa-hindi-img"
+          />
+          <span className="sr-only">Hacker House Goa</span>
         </h1>
         <div className="hero-sub">
           <span className="hero-meta">GOA, INDIA · 28–31 OCT 2026</span>
