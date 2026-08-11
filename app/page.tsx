@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { renderCard } from "@/lib/drawCard";
-import { renderPfpFrame, PFP_SIZE, PFP_PHOTO_W, PFP_PHOTO_H, PFP_INNER_R } from "@/lib/drawPfpFrame";
+import { renderPfpFrame, PFP_SIZE, PFP_PHOTO_W, PFP_PHOTO_H, PFP_INNER_R, PFP_CX, PFP_CY } from "@/lib/drawPfpFrame";
 import { CARD_W, CARD_H, PHOTO_W, PHOTO_H, PHOTO_CX, PHOTO_CY, PHOTO_R } from "@/lib/cardLayout";
 import {
   PhotoTransform,
@@ -185,9 +185,7 @@ export default function Page() {
     if (currentFormat === "badge") {
       return Math.hypot(pt.x - PHOTO_CX, pt.y - PHOTO_CY) <= PHOTO_R + 15;
     } else {
-      const cx = PFP_SIZE / 2;
-      const cy = PFP_SIZE / 2;
-      return Math.hypot(pt.x - cx, pt.y - cy) <= PFP_INNER_R + 20;
+      return Math.hypot(pt.x - PFP_CX, pt.y - PFP_CY) <= PFP_INNER_R + 20;
     }
   }
 

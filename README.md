@@ -75,7 +75,7 @@ No other configuration needed — it's a stock Next.js app.
 - **Card layout & size:** `lib/cardLayout.ts` (800×1120 portrait builder pass).
 - **Responsive Builder Grid:** `app/globals.css` — side-by-side layout on desktop with the default ID card preview naturally proportioned (`455px × 637px`) to match the exact height of the form panel.
 - **Card drawing & boundaries:** `lib/drawCard.ts` — Canvas 2D rendering with dynamic auto-fitting for titles, badges, side illustrations (palm trees, signposts, Goa house), and columns to ensure all content stays well within margins without overflow clipping.
-- **PFP Frame:** `lib/drawPfpFrame.ts` — Square 1000×1000 avatar frame generation.
+- **PFP Frame:** `lib/drawPfpFrame.ts` — Square 1000×1000 avatar frame generation with elevated circle positioning (`PFP_CY = 468`) and enlarged, high-contrast BUILDER 2026 seal badge (`R = 76px`).
 - **Mobile Responsive Layout:** `app/globals.css` — adaptive topbar, dynamic hero typography clamping, stacked action buttons, seamless touch scroll across preview with `touch-action: pan-y`, and refined footer alignment for small screens.
 - **Scroll to Top:** Floating smooth scroll-to-top action button that appears automatically when scrolled down.
 - **Builder titles:** `lib/titles.ts` — keyword-matched pools based on the

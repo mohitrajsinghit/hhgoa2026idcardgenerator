@@ -5,10 +5,13 @@ import { CardFonts } from "./drawCard";
 export const PFP_SIZE = 1000;
 const FRAME_PAD = 50;
 
+export const PFP_CX = PFP_SIZE / 2;
+export const PFP_CY = 468; // Shifted up from 500 so circle does not overlap the bottom ribbon
+
 export const PFP_PHOTO_W = PFP_SIZE - FRAME_PAD * 2;
 export const PFP_PHOTO_H = PFP_SIZE - FRAME_PAD * 2;
 
-export const PFP_INNER_R = 350;// circle radius for circular PFP crop
+export const PFP_INNER_R = 345; // circle radius for circular PFP crop
 const INNER_R = PFP_INNER_R;
 
 function roundRectPath(
@@ -54,7 +57,7 @@ export type PfpData = {
 
 export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   const { photoImg, transform, name, title, fonts } = data;
-  const CX = PFP_SIZE / 2, CY = PFP_SIZE / 2;
+  const CX = PFP_CX, CY = PFP_CY;
 
   ctx.clearRect(0, 0, PFP_SIZE, PFP_SIZE);
 
@@ -188,31 +191,37 @@ export function renderPfpFrame(ctx: CanvasRenderingContext2D, data: PfpData) {
   // ── Stamp badge (top-right) ───────────────────────────────────────────
   ctx.save();
   ctx.setLineDash([]);
-  const stampCx = PFP_SIZE - FRAME_PAD - 60;
-  const stampCy = FRAME_PAD + 60;
+  const stampCx = PFP_SIZE - FRAME_PAD - 80;
+  const stampCy = FRAME_PAD + 82;
   ctx.translate(stampCx, stampCy);
   ctx.rotate((12 * Math.PI) / 180);
 
+  const stampR = 76;
   ctx.beginPath();
-  ctx.arc(0, 0, 52, 0, Math.PI * 2);
+  ctx.arc(0, 0, stampR, 0, Math.PI * 2);
   ctx.fillStyle = COLORS.pink;
   ctx.fill();
 
-  ctx.beginPath();
-  ctx.arc(0, 0, 44, 0, Math.PI * 2);
-  ctx.strokeStyle = COLORS.yellow;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
   ctx.lineWidth = 2;
-  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, stampR - 10, 0, Math.PI * 2);
+  ctx.strokeStyle = COLORS.yellow;
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([5, 5]);
   ctx.stroke();
   ctx.setLineDash([]);
 
   ctx.fillStyle = COLORS.white;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `800 12px ${fonts.mono}`;
-  ctx.fillText("BUILDER", 0, -10);
-  ctx.font = `700 11px ${fonts.mono}`;
-  ctx.fillText("2026", 0, 8);
+  ctx.font = `800 17px ${fonts.mono}`;
+  ctx.fillText("BUILDER", 0, -12);
+  ctx.fillStyle = COLORS.yellow;
+  ctx.font = `800 16px ${fonts.mono}`;
+  ctx.fillText("2026", 0, 12);
   ctx.restore();
 
   ctx.restore(); // outer clip
